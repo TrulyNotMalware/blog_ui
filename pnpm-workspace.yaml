@@ -1,3 +1,8 @@
+# pnpm 10 reads build-script approval from here (not package.json's pnpm.onlyBuiltDependencies).
+# msw must be allowed to build; sharp/unrs-resolver are intentionally skipped. Leaving msw
+# unlisted makes a frozen install fail with ERR_PNPM_IGNORED_BUILDS.
+onlyBuiltDependencies:
+  - msw
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver

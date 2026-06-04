@@ -1,0 +1,26 @@
+# Attach to the same Gateway as blog-be.
+# Replace parentRefs and hostnames to match your cluster's Gateway.
+# See blog_be/k8s/app/httproute.yaml for the BE counterpart.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: blog-fe
+  namespace: blog
+  labels:
+    app.kubernetes.io/name: blog-fe
+    app.kubernetes.io/part-of: blog
+spec:
+  parentRefs:
+    - name: REPLACE_ME_gateway_name
+      namespace: REPLACE_ME_gateway_namespace
+      sectionName: https
+  hostnames:
+    - yourdomain.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: blog-fe
+          port: 3000

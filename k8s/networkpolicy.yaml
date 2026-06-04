@@ -1,0 +1,76 @@
+# Default-deny all ingress/egress; then explicitly allow what is needed.
+#
+# Ingress:  Gateway data-plane → blog-fe:3000
+# Egress:   blog-fe → blog-app (BE):8080, kube-dns:53, internet (NEXT_PUBLIC_ API calls)
+#
+# 현재 운영: Spring Cloud Gateway (`api-service` ns).
+# 다른 Gateway API 구현으로 바꾸면 아래 namespace label 도 그에 맞춰 변경
+# (envoy-gateway-system / istio-system / nginx-gateway / kgateway-system 등).
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: blog-fe-ingress
+  namespace: blog
+  labels:
+    app.kubernetes.io/name: blog-fe
+    app.kubernetes.io/part-of: blog
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: blog-fe
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: api-service
+      ports:
+        - protocol: TCP
+          port: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: blog-fe-egress
+  namespace: blog
+  labels:
+    app.kubernetes.io/name: blog-fe
+    app.kubernetes.io/part-of: blog
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: blog-fe
+  policyTypes:
+    - Egress
+  egress:
+    # BE API calls (server-side fetch)
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: blog-app
+      ports:
+        - protocol: TCP
+          port: 8080
+    # kube-dns
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # External HTTPS (NEXT_PUBLIC_API_BASE_URL from client-side, etc.)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
