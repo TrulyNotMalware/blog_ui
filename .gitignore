@@ -52,3 +52,4 @@ next-env.d.ts
 /k8s-local/
 .claude/
 CLAUDE.md
+AGENTS.md
