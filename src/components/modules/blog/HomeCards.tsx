@@ -11,9 +11,10 @@ interface Props {
   page: number;
   totalPages: number;
   theme?: Theme;
+  introLines?: string[];
 }
 
-export function HomeCards({ theme, posts, page, totalPages }: Props) {
+export function HomeCards({ theme, posts, page, totalPages, introLines }: Props) {
   const featured = posts[0];
   const rest = posts.slice(1, 10);
 
@@ -21,7 +22,7 @@ export function HomeCards({ theme, posts, page, totalPages }: Props) {
     <div className="blog-frame" data-theme={theme}>
       <Nav active="home" />
       <div style={{ padding: "32px 48px 0" }}>
-        <Intro />
+        <Intro lines={introLines} />
         <Toolbar view="cards" />
 
         {featured && <FeaturedCard post={featured} />}

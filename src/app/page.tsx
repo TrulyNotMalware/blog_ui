@@ -4,6 +4,7 @@ import { HomeCards } from "@/components/modules/blog/HomeCards";
 import { HomeList } from "@/components/modules/blog/HomeList";
 import { MobileHome } from "@/components/modules/mobile/Mobile";
 import { postService } from "@/services/postService";
+import { getIntro } from "@/services/contentService";
 
 export const revalidate = 60;
 
@@ -19,7 +20,10 @@ export default async function HomePage({ searchParams }: PageProps) {
   const page = Math.max(1, requested);
   const view: "list" | "cards" = sp.view === "list" ? "list" : "cards";
 
-  const data = await postService.list({ page, pageSize: PAGE_SIZE });
+  const [data, intro] = await Promise.all([
+    postService.list({ page, pageSize: PAGE_SIZE }),
+    getIntro(),
+  ]);
   const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
 
   // Out-of-range page → 404 instead of rendering an empty grid (and letting bots
@@ -28,9 +32,9 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   const desktop =
     view === "list" ? (
-      <HomeList posts={data.items} page={page} totalPages={totalPages} />
+      <HomeList posts={data.items} page={page} totalPages={totalPages} introLines={intro.lines} />
     ) : (
-      <HomeCards posts={data.items} page={page} totalPages={totalPages} />
+      <HomeCards posts={data.items} page={page} totalPages={totalPages} introLines={intro.lines} />
     );
 
   return (

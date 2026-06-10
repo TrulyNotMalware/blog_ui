@@ -32,16 +32,17 @@ afterEach(() => {
 });
 
 describe("AdminShell nav tabs", () => {
-  it("renders exactly 3 tabs: posts, drafts, tags", () => {
+  it("renders exactly 4 tabs: posts, drafts, tags, content", () => {
     render(<AdminShell />);
     const nav = screen.getByRole("navigation");
     const links = Array.from(nav.querySelectorAll("a")).filter((a) =>
-      ["posts", "drafts", "tags"].some((label) => a.textContent?.includes(label)),
+      ["posts", "drafts", "tags", "content"].some((label) => a.textContent?.includes(label)),
     );
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(4);
     expect(links[0].textContent).toContain("posts");
     expect(links[1].textContent).toContain("drafts");
     expect(links[2].textContent).toContain("tags");
+    expect(links[3].textContent).toContain("content");
   });
 
   it("does not render media or settings tabs", () => {

@@ -11,14 +11,15 @@ interface Props {
   page: number;
   totalPages: number;
   theme?: Theme;
+  introLines?: string[];
 }
 
-export function HomeList({ theme, posts, page, totalPages }: Props) {
+export function HomeList({ theme, posts, page, totalPages, introLines }: Props) {
   return (
     <div className="blog-frame" data-theme={theme}>
       <Nav active="home" />
       <div style={{ padding: "32px 48px 0" }}>
-        <Intro />
+        <Intro lines={introLines} />
         <Toolbar view="list" />
 
         <section style={{ marginBottom: 28 }}>

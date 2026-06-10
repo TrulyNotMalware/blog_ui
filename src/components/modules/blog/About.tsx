@@ -1,50 +1,48 @@
 import { Footer } from "@/components/layout/Footer";
 import { Nav } from "@/components/layout/Nav";
 import { MobileFooter, MobileHeader } from "@/components/modules/mobile/Chrome";
+import { DEFAULT_ABOUT } from "@/services/contentService";
 import type { Theme } from "@/types";
-
-interface NowItem {
-  type: string;
-  text: string;
-}
-
-interface StackItem {
-  key: string;
-  value: string;
-}
 
 interface Props {
   theme?: Theme;
-  now?: NowItem[];
-  stack?: StackItem[];
+  headline?: string;
+  paragraphs?: string[];
+  now?: { type: string; text: string }[];
+  stack?: { key: string; value: string }[];
   contact?: { label: string; value: string }[];
 }
 
-const DEFAULT_NOW: NowItem[] = [
-  { type: "building", text: "notypiedev blog engine (this site)" },
-  { type: "building", text: "pgmeter — Postgres 쿼리 시각화 도구" },
-  { type: "writing", text: "OAuth 2.1 구현 가이드 (책, 진행 40%)" },
-  { type: "reading", text: "Designing Data-Intensive Apps (다시)" },
-];
-
-const DEFAULT_STACK: StackItem[] = [
-  { key: "languages", value: "TypeScript · Go · Python · SQL" },
-  { key: "runtimes", value: "Bun · Node · Cloudflare Workers" },
-  { key: "db", value: "Postgres · SQLite · Redis" },
-  { key: "infra", value: "fly.io · cloudflare · litestream" },
-  { key: "editor", value: "Neovim · Helix (시도 중)" },
-];
-
-const DEFAULT_CONTACT: { label: string; value: string }[] = [
-  { label: "email", value: "notleebutyee@gmail.com" },
-  { label: "github", value: "@TrulyNotMalware" },
-];
+/**
+ * Renders a paragraph string, splitting on backtick-delimited segments so that
+ * `inline code` becomes <span className="icode">inline code</span>.
+ */
+function ParagraphWithCode({ text }: { text: string }) {
+  const parts = text.split("`");
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          // odd index = inside backticks → inline code
+          <span key={`code-${i}`} className="icode">
+            {part}
+          </span>
+        ) : (
+          // even index = plain text segment; React renders string nodes fine
+          <span key={`text-${i}`}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
 
 export function About({
   theme,
-  now = DEFAULT_NOW,
-  stack = DEFAULT_STACK,
-  contact = DEFAULT_CONTACT,
+  headline = DEFAULT_ABOUT.headline,
+  paragraphs = DEFAULT_ABOUT.paragraphs,
+  now = DEFAULT_ABOUT.now,
+  stack = DEFAULT_ABOUT.stack,
+  contact = DEFAULT_ABOUT.contact,
 }: Props) {
   return (
     <div className="blog-frame" data-theme={theme}>
@@ -76,31 +74,23 @@ export function About({
               letterSpacing: "-0.02em",
             }}
           >
-            나는 만드는 것에 대해 쓴다.
+            {headline}
           </h1>
-          <p
-            style={{
-              fontSize: 16,
-              lineHeight: 1.7,
-              color: "var(--ink-2)",
-              margin: "0 0 16px",
-            }}
-          >
-            notypiedev는 백엔드, 인프라, 그리고 그 사이의 어색한 영역에 대한 기록이다. 화려한
-            비교 글이나{" "}
-            <span className="icode">10 things you didn&apos;t know</span> 같은 건 없다.
-          </p>
-          <p
-            style={{
-              fontSize: 16,
-              lineHeight: 1.7,
-              color: "var(--ink-2)",
-              margin: "0 0 32px",
-            }}
-          >
-            대신 — 직접 부딪힌 문제, 잘못된 결정과 그걸 알아챈 순간, 다음에 다르게 할 것들에
-            대해 쓴다. 정직하게.
-          </p>
+          {/* CMS-driven render-only lists below use index keys: order is fixed
+              and author-entered rows are not guaranteed unique. */}
+          {paragraphs.map((text, i) => (
+            <p
+              key={i}
+              style={{
+                fontSize: 16,
+                lineHeight: 1.7,
+                color: "var(--ink-2)",
+                margin: i < paragraphs.length - 1 ? "0 0 16px" : "0 0 32px",
+              }}
+            >
+              <ParagraphWithCode text={text} />
+            </p>
+          ))}
 
           <div
             className="mono"
@@ -123,9 +113,9 @@ export function About({
               gap: 8,
             }}
           >
-            {now.map((it) => (
+            {now.map((it, i) => (
               <li
-                key={`${it.type}-${it.text}`}
+                key={i}
                 style={{
                   display: "grid",
                   gridTemplateColumns: "90px 1fr",
@@ -170,8 +160,8 @@ export function About({
             }}
           >
             <tbody>
-              {stack.map((s) => (
-                <tr key={s.key} style={{ borderBottom: "1px dashed var(--line)" }}>
+              {stack.map((s, i) => (
+                <tr key={i} style={{ borderBottom: "1px dashed var(--line)" }}>
                   <td
                     style={{
                       padding: "8px 16px 8px 0",
@@ -205,8 +195,8 @@ export function About({
             style={{ fontSize: 12, color: "var(--ink-2)", width: "100%" }}
           >
             <tbody>
-              {contact.map((c) => (
-                <tr key={c.label}>
+              {contact.map((c, i) => (
+                <tr key={i}>
                   <td
                     style={{
                       padding: "4px 12px 4px 0",

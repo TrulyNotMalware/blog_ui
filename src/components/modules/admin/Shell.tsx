@@ -4,7 +4,7 @@ import { LogoutButton } from "@/components/modules/admin/LogoutButton";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import type { PostStatus, Theme } from "@/types";
 
-export type AdminTab = "posts" | "drafts" | "tags";
+export type AdminTab = "posts" | "drafts" | "tags" | "content";
 
 interface ShellProps {
   tab?: AdminTab;
@@ -17,6 +17,7 @@ const DEFAULT_COUNTS: Record<AdminTab, number | null> = {
   posts: 12,
   drafts: 2,
   tags: 12,
+  content: null,
 } as Record<AdminTab, number | null>;
 
 export function AdminShell({ tab = "posts", theme, counts, children }: ShellProps) {
@@ -120,7 +121,7 @@ export function AdminShell({ tab = "posts", theme, counts, children }: ShellProp
           background: "var(--bg-1)",
         }}
       >
-        {(["posts", "drafts", "tags"] as AdminTab[]).map((id) => (
+        {(["posts", "drafts", "tags", "content"] as AdminTab[]).map((id) => (
           <Link
             key={id}
             href={id === "posts" ? "/admin" : `/admin/${id}`}

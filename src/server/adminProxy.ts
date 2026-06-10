@@ -31,6 +31,8 @@ type ForwardOptions = {
   search?: URLSearchParams | null;
   body?: unknown;
   request: Request;
+  /** Tags to revalidate on a successful non-GET mutation. Defaults to [POSTS_CACHE_TAG]. */
+  revalidateTags?: string[];
 };
 
 // Origins the admin browser is allowed to call these route handlers from.
@@ -165,6 +167,7 @@ export async function forwardToBeAsAdmin({
   search,
   body,
   request,
+  revalidateTags = [POSTS_CACHE_TAG],
 }: ForwardOptions): Promise<Response> {
   if (!request || !originIsAllowed(request)) {
     return Response.json({ error: "forbidden_cross_origin" }, { status: 403 });
@@ -237,7 +240,9 @@ export async function forwardToBeAsAdmin({
   // which would serve stale content once while refreshing in the background) — a
   // single-author blog wants to see its own edit reflected right away.
   if (method !== "GET" && beRes.ok) {
-    revalidateTag(POSTS_CACHE_TAG, { expire: 0 });
+    for (const tag of revalidateTags) {
+      revalidateTag(tag, { expire: 0 });
+    }
   }
 
   return forwardWithCookies(beRes, newCookies);

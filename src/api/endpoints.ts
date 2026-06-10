@@ -8,6 +8,9 @@ export const endpoints = {
     list: "tags",
     detail: (name: string) => `tags/${name}`,
   },
+  content: {
+    detail: (key: string) => `content/${key}`,
+  },
   search: "search",
 } as const;
 
@@ -21,5 +24,8 @@ export const adminEndpoints = {
     list: "/api/admin/posts",
     detail: (id: string) => `/api/admin/posts/${encodeURIComponent(id)}`,
     publish: (id: string) => `/api/admin/posts/${encodeURIComponent(id)}/publish`,
+  },
+  content: {
+    detail: (key: string) => `/api/admin/content/${encodeURIComponent(key)}`,
   },
 } as const;

@@ -1,4 +1,10 @@
-export function Intro() {
+import { DEFAULT_INTRO } from "@/services/contentService";
+
+interface Props {
+  lines?: string[];
+}
+
+export function Intro({ lines = DEFAULT_INTRO.lines }: Props) {
   return (
     <div
       style={{
@@ -15,9 +21,14 @@ export function Intro() {
         {">"}_
       </span>
       <div className="mono" style={{ fontSize: 13, lineHeight: 1.7, color: "var(--ink-2)" }}>
-        인프라, 백엔드, 그리고 그 사이의 어색한 영역에 대한 글.
-        <br />
-        아무도 안 시켰지만 쓴다.
+        {lines.map((line, i) => (
+          // Render-only list with fixed order — index keys are correct and
+          // survive duplicate lines (author-entered content is not unique).
+          <span key={i}>
+            {line}
+            {i < lines.length - 1 && <br />}
+          </span>
+        ))}
       </div>
     </div>
   );
