@@ -1,0 +1,11 @@
+version: 2
+updates:
+  # pnpm projects use the "npm" ecosystem key (Dependabot reads pnpm-lock.yaml).
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
