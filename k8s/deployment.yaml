@@ -30,10 +30,27 @@ spec:
         fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
+      # ISR / on-demand revalidation (revalidate=60, revalidateTag on admin edits) rewrites
+      # prerendered output under .next/server/app AND .next/cache at runtime. With
+      # readOnlyRootFilesystem the image's baked .next is not writable, so we seed a writable
+      # emptyDir with the built .next and mount it over /app/.next. The root FS stays read-only.
+      initContainers:
+        - name: seed-next
+          image: harbor.registry.notypie.dev/dev/blog_fe:latest
+          imagePullPolicy: Always
+          command: ["sh", "-c", "cp -a /app/.next/. /next-rw/"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: next-rw
+              mountPath: /next-rw
       containers:
         - name: fe
           # Build with NEXT_PUBLIC_* build args — see configmap.yaml for instructions.
-          image: ghcr.io/TrulyNotMalware/blog-fe:latest
+          image: harbor.registry.notypie.dev/dev/blog_fe:latest
           imagePullPolicy: Always
           ports:
             - name: http
@@ -79,12 +96,14 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-            - name: cache
-              mountPath: /app/.next/cache
+            # Writable .next (seeded from the image by the initContainer). Covers both the
+            # prerender output (.next/server/app/*.html) and the incremental cache (.next/cache).
+            - name: next-rw
+              mountPath: /app/.next
       volumes:
         - name: tmp
           emptyDir: {}
-        - name: cache
+        - name: next-rw
           emptyDir: {}
       topologySpreadConstraints:
         - maxSkew: 1

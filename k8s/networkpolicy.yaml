@@ -1,11 +1,14 @@
 # Default-deny all ingress/egress; then explicitly allow what is needed.
 #
-# Ingress:  Gateway data-plane → blog-fe:3000
-# Egress:   blog-fe → blog-app (BE):8080, kube-dns:53, internet (NEXT_PUBLIC_ API calls)
+# Ingress:  Istio ingress-gateway data-plane → blog-fe:3000
+# Egress:   blog-fe → kube-dns:53, internet:443 (server-side + browser API calls to
+#           NEXT_PUBLIC_API_BASE_URL == the EXTERNAL gateway host api.<domain>)
 #
-# 현재 운영: Spring Cloud Gateway (`api-service` ns).
-# 다른 Gateway API 구현으로 바꾸면 아래 namespace label 도 그에 맞춰 변경
-# (envoy-gateway-system / istio-system / nginx-gateway / kgateway-system 등).
+# IMPORTANT: the FE is fronted DIRECTLY by the Istio Gateway (the `api-gateway` Gateway
+# lives in `istio-system`, so its data-plane pods run there) — unlike blog_be, which sits
+# behind the Spring Cloud Gateway in `api-service`. If you front the FE with a different
+# Gateway API implementation, change the ingress namespaceSelector below to that data-plane
+# namespace (istio-system / envoy-gateway-system / nginx-gateway / kgateway-system).
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -25,7 +28,7 @@ spec:
     - from:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: api-service
+              kubernetes.io/metadata.name: istio-system
       ports:
         - protocol: TCP
           port: 3000

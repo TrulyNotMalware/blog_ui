@@ -11,11 +11,11 @@ metadata:
     app.kubernetes.io/part-of: blog
 spec:
   parentRefs:
-    - name: REPLACE_ME_gateway_name
-      namespace: REPLACE_ME_gateway_namespace
-      sectionName: https
+    - name: api-gateway
+      namespace: istio-system
+      sectionName: https-blog
   hostnames:
-    - yourdomain.com
+    - "notypie.dev"
   rules:
     - matches:
         - path:
