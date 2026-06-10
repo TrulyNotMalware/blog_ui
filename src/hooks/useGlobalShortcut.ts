@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent } from "react";
 
 /**
  * Registers a global keydown listener for a single key, ignoring:
@@ -9,8 +9,7 @@ import { useEffect, useRef } from "react";
  * - events fired while focus is on input / textarea / select / [contenteditable]
  */
 export function useGlobalShortcut(key: string, handler: () => void): void {
-  const handlerRef = useRef(handler);
-  handlerRef.current = handler;
+  const fireHandler = useEffectEvent(handler);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -22,7 +21,7 @@ export function useGlobalShortcut(key: string, handler: () => void): void {
         if (tag === "input" || tag === "textarea" || tag === "select") return;
         if (e.target.getAttribute("contenteditable") !== null) return;
       }
-      handlerRef.current();
+      fireHandler();
     }
 
     document.addEventListener("keydown", onKeyDown);
