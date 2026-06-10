@@ -1,0 +1,20 @@
+.git/
+.github/
+node_modules/
+.next/
+npm-debug.log*
+
+# Never ship local env into the build context. NEXT_PUBLIC_* come via --build-arg;
+# .env.local would otherwise sit in the build stage's context.
+.env
+.env.local
+.env.*.local
+
+.vscode/
+.idea/
+.DS_Store
+
+coverage/
+*.md
+Dockerfile
+.dockerignore
