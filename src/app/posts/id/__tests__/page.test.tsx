@@ -1,9 +1,14 @@
 // @vitest-environment node
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/services/postService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/services/postService")>();
+  return { ...actual, postService: { list: vi.fn(), detail: vi.fn() } };
+});
 
-import { extractToc } from "../../[id]/page";
+import { extractToc, generateStaticParams } from "../../[id]/page";
+import { postService } from "@/services/postService";
 
 describe("extractToc", () => {
   it("parses ## headings into numbered toc entries with slugs", () => {
@@ -85,5 +90,65 @@ describe("PostPage Suspense boundary", () => {
     expect(typeof mod.default).toBe("function");
     // generateStaticParams should also be exported
     expect(typeof mod.generateStaticParams).toBe("function");
+  });
+});
+
+describe("generateStaticParams", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("maps post ids to params when the API responds (single page)", async () => {
+    vi.mocked(postService.list).mockResolvedValue({
+      items: [{ id: "a" }, { id: "b" }],
+      total: 2,
+      hasNext: false,
+    } as never);
+
+    await expect(generateStaticParams()).resolves.toEqual([{ id: "a" }, { id: "b" }]);
+  });
+
+  it("collects ids across all pages when paginated (multi-page success)", async () => {
+    // page 1: 100 items, total 150 → one more page (page 2) with 50 items.
+    vi.mocked(postService.list).mockImplementation((async ({ page }: { page: number }) => {
+      if (page === 1) {
+        return {
+          items: Array.from({ length: 100 }, (_, i) => ({ id: `p1-${i}` })),
+          total: 150,
+          hasNext: true,
+        };
+      }
+      return {
+        items: Array.from({ length: 50 }, (_, i) => ({ id: `p2-${i}` })),
+        total: 150,
+        hasNext: true,
+      };
+    }) as never);
+
+    const params = await generateStaticParams();
+    expect(params).toHaveLength(150);
+    expect(params).toContainEqual({ id: "p1-0" });
+    expect(params).toContainEqual({ id: "p2-49" });
+  });
+
+  it("returns [] when page 1 is unreachable (does not throw)", async () => {
+    vi.mocked(postService.list).mockRejectedValue(new Error("ECONNREFUSED"));
+
+    await expect(generateStaticParams()).resolves.toEqual([]);
+  });
+
+  it("returns [] all-or-nothing when a later page fails mid-pagination", async () => {
+    // page 1 succeeds (triggers pagination); a subsequent page rejects.
+    vi.mocked(postService.list).mockImplementation((async ({ page }: { page: number }) => {
+      if (page === 1) {
+        return {
+          items: Array.from({ length: 100 }, (_, i) => ({ id: `p1-${i}` })),
+          total: 300,
+          hasNext: true,
+        };
+      }
+      throw new Error("ECONNREFUSED");
+    }) as never);
+
+    // Partial coverage would re-introduce a build-time API dependency, so we expect [].
+    await expect(generateStaticParams()).resolves.toEqual([]);
   });
 });

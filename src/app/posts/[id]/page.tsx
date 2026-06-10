@@ -27,31 +27,49 @@ const STATIC_PARAMS_MAX_PAGES = 100;
 const STATIC_PARAMS_CONCURRENCY = 5;
 
 export async function generateStaticParams(): Promise<{ id: string }[]> {
-  const first = await postService.list({ page: 1, pageSize: STATIC_PARAMS_PAGE_SIZE });
-  const out: { id: string }[] = first.items.map((p) => ({ id: p.id }));
-  if (!first.hasNext) return out;
+  // Build-time pre-rendering must not hard-depend on the live API. If ANY page of the
+  // listing is unreachable during the build, pre-render nothing (return []) and let every
+  // detail page render on demand at runtime (dynamicParams defaults to true). A *partial*
+  // list would be worse than []: Next would still prerender those ids, and each detail
+  // page re-fetches the API — reintroducing the very build-time dependency we're avoiding.
+  try {
+    const first = await postService.list({ page: 1, pageSize: STATIC_PARAMS_PAGE_SIZE });
+    const out: { id: string }[] = first.items.map((p) => ({ id: p.id }));
+    if (!first.hasNext) return out;
 
-  const totalPages = Math.min(
-    Math.ceil(first.total / STATIC_PARAMS_PAGE_SIZE),
-    STATIC_PARAMS_MAX_PAGES,
-  );
-  // Page 1's `total` already tells us every remaining page, so fire them all through a
-  // worker pool of fixed size instead of serial batches. A batch loop stalls on the
-  // slowest response per batch; the pool only ever waits on the slowest response per
-  // free slot, while still capping concurrent BE fetches during `next build`.
-  const pages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
-  let cursor = 0;
-  async function worker(): Promise<void> {
-    while (cursor < pages.length) {
-      const page = pages[cursor++];
-      const res = await postService.list({ page, pageSize: STATIC_PARAMS_PAGE_SIZE });
-      for (const p of res.items) out.push({ id: p.id });
+    const totalPages = Math.min(
+      Math.ceil(first.total / STATIC_PARAMS_PAGE_SIZE),
+      STATIC_PARAMS_MAX_PAGES,
+    );
+    // Page 1's `total` already tells us every remaining page, so fire them all through a
+    // worker pool of fixed size instead of serial batches. A batch loop stalls on the
+    // slowest response per batch; the pool only ever waits on the slowest response per
+    // free slot, while still capping concurrent BE fetches during `next build`.
+    const pages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
+    let cursor = 0;
+    let failed = false;
+    // Each worker catches its own fetch errors so Promise.all never rejects mid-flight
+    // (which would return `out` while sibling workers keep mutating it). We await every
+    // worker, then decide all-or-nothing from the shared `failed` flag.
+    async function worker(): Promise<void> {
+      while (cursor < pages.length && !failed) {
+        const page = pages[cursor++];
+        try {
+          const res = await postService.list({ page, pageSize: STATIC_PARAMS_PAGE_SIZE });
+          for (const p of res.items) out.push({ id: p.id });
+        } catch {
+          failed = true;
+        }
+      }
     }
+    await Promise.all(
+      Array.from({ length: Math.min(STATIC_PARAMS_CONCURRENCY, pages.length) }, () => worker()),
+    );
+    return failed ? [] : out;
+  } catch {
+    // Page-1 fetch failed → pre-render nothing; detail pages render on demand at runtime.
+    return [];
   }
-  await Promise.all(
-    Array.from({ length: Math.min(STATIC_PARAMS_CONCURRENCY, pages.length) }, () => worker()),
-  );
-  return out;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

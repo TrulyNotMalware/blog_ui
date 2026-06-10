@@ -23,6 +23,14 @@ vi.mock("next/cache", () => ({
 
 vi.mock("server-only", () => ({}));
 
+// Pin SITE_URL to a non-localhost value so the same-origin allowlist is deterministic
+// (otherwise SITE_URL falls back to http://localhost:3000 and collides with the
+// localhost ports the CSRF tests use as the "other" origin).
+vi.mock("@/constants", () => ({
+  API_BASE_URL: "http://be.test/v1",
+  SITE_URL: "https://blog.example.com",
+}));
+
 import { ADMIN_COOKIE_NAME, assertSameOrigin, buildBeUrl, buildClearCookieHeader, forwardToBeAsAdmin } from "../adminProxy";
 
 beforeEach(() => {
@@ -118,6 +126,39 @@ describe("assertSameOrigin", () => {
     const req = new Request("https://example.com/api/foo");
     const res = assertSameOrigin(req);
     expect(res!.status).toBe(403);
+  });
+});
+
+// ─────────────────────────────────────────────
+// assertSameOrigin — Next standalone behind a reverse proxy (Istio)
+// In `next start`/standalone the server binds 0.0.0.0:3000 and request.url's origin is that
+// internal bind address, NOT the public host. The browser still sends the real public Origin
+// (== SITE_URL). The guard must accept SITE_URL even when it differs from request.url.origin.
+// ─────────────────────────────────────────────
+describe("assertSameOrigin — standalone reverse-proxy", () => {
+  it("Origin == SITE_URL while request.url is the internal bind origin → allow", () => {
+    const req = new Request("http://0.0.0.0:3000/api/admin/auth/login", {
+      method: "POST",
+      headers: { origin: "https://blog.example.com" },
+    });
+    expect(assertSameOrigin(req)).toBeNull();
+  });
+
+  it("Referer on SITE_URL while request.url is internal → allow", () => {
+    const req = new Request("http://0.0.0.0:3000/api/admin/posts", {
+      headers: { referer: "https://blog.example.com/admin" },
+    });
+    expect(assertSameOrigin(req)).toBeNull();
+  });
+
+  it("cross-site Origin still rejected even with internal request.url → 403", async () => {
+    const req = new Request("http://0.0.0.0:3000/api/admin/posts", {
+      method: "POST",
+      headers: { origin: "https://evil.example.com" },
+    });
+    const res = assertSameOrigin(req);
+    expect(res!.status).toBe(403);
+    expect((await res!.json()).error).toBe("forbidden_cross_origin");
   });
 });
 

@@ -12,8 +12,15 @@ interface PageProps {
 }
 
 export async function generateStaticParams(): Promise<{ name: string }[]> {
-  const tags = await tagService.list();
-  return tags.map((t) => ({ name: t.name }));
+  // Build-time pre-rendering must not hard-depend on the live API. If the API is
+  // unreachable during the build, skip pre-rendering and let pages render on demand
+  // at runtime (dynamicParams defaults to true).
+  try {
+    const tags = await tagService.list();
+    return tags.map((t) => ({ name: t.name }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: PageProps) {

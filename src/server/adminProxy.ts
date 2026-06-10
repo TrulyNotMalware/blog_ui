@@ -2,7 +2,7 @@ import "server-only";
 
 import { revalidateTag } from "next/cache";
 import { cookies } from "next/headers";
-import { API_BASE_URL } from "@/constants";
+import { API_BASE_URL, SITE_URL } from "@/constants";
 import { POSTS_CACHE_TAG } from "@/services/postService";
 
 export const ADMIN_ACCESS_COOKIE = "admin_access";
@@ -33,18 +33,36 @@ type ForwardOptions = {
   request: Request;
 };
 
-function originIsAllowed(request: Request): boolean {
-  let reqUrl: URL;
+// Origins the admin browser is allowed to call these route handlers from.
+// `request.url` is NOT trustworthy here: under `next start`/standalone the server binds
+// 0.0.0.0:3000 and Next derives request.url's origin from that bind address, ignoring the
+// Host / X-Forwarded-Host the reverse proxy (Istio) sets. So behind TLS at https://notypie.dev
+// the browser sends `Origin: https://notypie.dev` while request.url.origin is
+// `http://0.0.0.0:3000`, and a naive equality check rejects every legit same-site request.
+// Instead we pin the allowlist to the build-time SITE_URL (the real public origin) and still
+// accept request.url's origin so local dev (SITE_URL == bind origin == localhost:3000) works.
+function allowedOrigins(request: Request): Set<string> {
+  const out = new Set<string>();
   try {
-    reqUrl = new URL(request.url);
+    out.add(new URL(SITE_URL).origin);
   } catch {
-    return false;
+    /* SITE_URL malformed — fall through to request.url only */
   }
+  try {
+    out.add(new URL(request.url).origin);
+  } catch {
+    /* ignore */
+  }
+  return out;
+}
+
+function originIsAllowed(request: Request): boolean {
+  const allowed = allowedOrigins(request);
   const origin = request.headers.get("origin");
   if (origin !== null) {
     if (origin === "null") return false;
     try {
-      return new URL(origin).origin === reqUrl.origin;
+      return allowed.has(new URL(origin).origin);
     } catch {
       return false;
     }
@@ -52,7 +70,7 @@ function originIsAllowed(request: Request): boolean {
   const referer = request.headers.get("referer");
   if (referer !== null) {
     try {
-      return new URL(referer).origin === reqUrl.origin;
+      return allowed.has(new URL(referer).origin);
     } catch {
       return false;
     }
