@@ -8,7 +8,11 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       attribute="data-theme"
       defaultTheme="dark"
       themes={["light", "dark"]}
-      enableSystem={false}
+      // The UI exposes a "system"/auto option (MobileMenu). With enableSystem the
+      // "system" choice resolves to data-theme="light"|"dark" via prefers-color-scheme;
+      // without it, next-themes wrote data-theme="system", which matched no token
+      // block in tokens.css and left every --bg/--ink var undefined → broken colors.
+      enableSystem
       disableTransitionOnChange
       storageKey="notypiedev-theme"
       {...props}

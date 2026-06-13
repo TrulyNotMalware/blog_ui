@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTagsQuery } from "@/hooks/query/useTagsQuery";
 import { useUIStore } from "@/stores/useUIStore";
 
@@ -16,6 +16,12 @@ export function MobileMenu() {
   const isOpen = useUIStore((s) => s.isMobileMenuOpen);
   const closeMobileMenu = useUIStore((s) => s.closeMobileMenu);
   const { theme, setTheme } = useTheme();
+  // The drawer is always rendered (so it can slide on close too), which means it is
+  // also server-rendered. `theme` is only known on the client, so gate the active-theme
+  // highlight behind `mounted` — otherwise SSR (no theme) vs client (resolved theme)
+  // disagree and React reports a hydration mismatch on the theme buttons.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   // Mounted on every page via Providers; only query tags when the drawer is open.
   const tagsQuery = useTagsQuery({ enabled: isOpen });
 
@@ -28,37 +34,23 @@ export function MobileMenu() {
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const tags = tagsQuery.data ?? [];
 
+  // Always mounted so the panel can slide both in and out; `data-open` drives the
+  // CSS transition. `inert` keeps the closed drawer out of tab order / pointer events.
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Mobile menu"
-      style={{ position: "fixed", inset: 0, zIndex: 40 }}
+      aria-hidden={!isOpen}
+      inert={!isOpen}
+      className="drawer-root"
+      data-open={isOpen}
       onClick={closeMobileMenu}
     >
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} />
-      <aside
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          position: "absolute",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: "min(280px, 88vw)",
-          background: "var(--bg)",
-          borderLeft: "1px solid var(--line-2)",
-          boxShadow: "-12px 0 30px rgba(0,0,0,0.35)",
-          padding: "24px 22px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 28,
-          overflowY: "auto",
-        }}
-      >
+      <div className="drawer-overlay" />
+      <aside className="drawer-panel" onClick={(e) => e.stopPropagation()}>
         <nav
           className="mono"
           style={{ display: "flex", flexDirection: "column", gap: 4 }}
@@ -119,7 +111,7 @@ export function MobileMenu() {
             }}
           >
             {(["dark", "light", "system"] as const).map((t) => {
-              const isActive = (theme ?? "system") === t;
+              const isActive = mounted && (theme ?? "system") === t;
               return (
                 <button
                   type="button"

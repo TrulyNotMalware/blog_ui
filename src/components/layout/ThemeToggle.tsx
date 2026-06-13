@@ -4,15 +4,16 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Default to "dark" during SSR/pre-mount so the icon doesn't flip after hydration.
-  const current = mounted ? (theme ?? "dark") : "dark";
+  // Use the *resolved* theme so the icon reflects what's actually on screen even when
+  // the selected theme is "system". Default to "dark" pre-mount to avoid a hydration flip.
+  const current = mounted ? (resolvedTheme ?? "dark") : "dark";
   const isDark = current === "dark";
 
   const handleToggle = (): void => {
