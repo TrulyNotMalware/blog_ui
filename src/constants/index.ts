@@ -1,5 +1,5 @@
-export const APP_NAME = "Tech Blog";
-export const APP_DESCRIPTION = "A technical blog built with Next.js";
+export const APP_NAME = "Notypiedev";
+export const APP_DESCRIPTION = "Notypiedev — 개발과 기록";
 
 export const ROUTES = {
   HOME: "/",

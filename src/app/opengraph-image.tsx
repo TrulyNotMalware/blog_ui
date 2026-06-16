@@ -1,11 +1,17 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { APP_DESCRIPTION, APP_NAME } from "@/constants";
 
 export const alt = `${APP_NAME} — ${APP_DESCRIPTION}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OpengraphImage() {
+// Hoist static I/O — load the Korean-capable font once; APP_DESCRIPTION contains Hangul.
+const fontPromise = readFile(join(process.cwd(), "src/assets/fonts/Pretendard-Bold.otf"));
+
+export default async function OpengraphImage() {
+  const fontData = await fontPromise;
   return new ImageResponse(
     (
       <div
@@ -44,6 +50,7 @@ export default function OpengraphImage() {
               opacity: 0.75,
               maxWidth: 900,
               lineHeight: 1.35,
+              fontFamily: "Pretendard",
             }}
           >
             {APP_DESCRIPTION}
@@ -63,6 +70,9 @@ export default function OpengraphImage() {
         </div>
       </div>
     ),
-    { ...size },
+    {
+      ...size,
+      fonts: [{ name: "Pretendard", data: fontData, style: "normal", weight: 700 }],
+    },
   );
 }

@@ -109,7 +109,7 @@ export function PostView({
           >
             // share
           </div>
-          <ShareButtons title={post.title} postId={post.id} />
+          <ShareButtons postId={post.id} />
           <div
             className="mono"
             style={{
