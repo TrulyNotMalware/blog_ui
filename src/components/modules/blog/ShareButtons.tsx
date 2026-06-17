@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface ShareButtonsProps {
   postId: string;
@@ -8,14 +8,11 @@ interface ShareButtonsProps {
 
 export function ShareButtons({ postId }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
-  const [url, setUrl] = useState("");
-
-  useEffect(() => {
-    setUrl(`${window.location.origin}/posts/${postId}`);
-  }, [postId]);
 
   const copyLink = async () => {
     try {
+      // Derived from props at call time (client-only handler), no effect/state needed.
+      const url = `${window.location.origin}/posts/${postId}`;
       await navigator.clipboard.writeText(url);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
